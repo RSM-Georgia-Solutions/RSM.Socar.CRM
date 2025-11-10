@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+    <ProjectReference Include="..\RSM.Socar.CRM.Web\RSM.Socar.CRM.Web.csproj" />
+    <ProjectReference Include="..\RSM.Socar.CRM.Infrastructure\RSM.Socar.CRM.Infrastructure.csproj" />
+    <ProjectReference Include="..\RSM.Socar.CRM.Application\RSM.Socar.CRM.Application.csproj" />
+    <ProjectReference Include="..\RSM.Socar.CRM.Domain\RSM.Socar.CRM.Domain.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+</Project>
