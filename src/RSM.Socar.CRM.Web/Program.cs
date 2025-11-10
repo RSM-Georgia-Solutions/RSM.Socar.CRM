@@ -1,11 +1,13 @@
-﻿using MediatR;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.OData;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using RSM.Socar.CRM.Application.Auth;
 using RSM.Socar.CRM.Infrastructure.Extensions;     // <- new
 using RSM.Socar.CRM.Infrastructure.Security;
 using RSM.Socar.CRM.Web.Endpoints.Auth;
+using RSM.Socar.CRM.Web.OData;
+using RSM.Socar.CRM.Web.Swagger;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -45,6 +47,31 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddAuthorization();
 builder.Services.AddEndpointsApiExplorer().AddSwaggerGen();
 
+
+// Controllers + OData
+builder.Services
+    .AddControllers()
+    .AddOData(opt =>
+    {
+        opt.AddRouteComponents("odata", EdmModelBuilder.GetEdmModel())
+           .Select()
+           .Filter()
+           .OrderBy()
+           .Expand()
+           .Count()
+           .SetMaxTop(100);
+    });
+
+builder.Services.AddRouting(); // optional, but good to have with OData
+
+
+builder.Services
+    .AddEndpointsApiExplorer()
+    .AddSwaggerGen(c =>
+    {
+        c.SchemaFilter<DeltaSchemaFilter>();
+    });
+
 var app = builder.Build();
 
 // (dev seeding, optional)
@@ -54,6 +81,7 @@ using (var scope = app.Services.CreateScope())
     await RSM.Socar.CRM.Infrastructure.Seed.DevUserSeeder.SeedAsync(db);
 }
 
+app.MapControllers();
 app.UseSwagger();
 app.UseSwaggerUI();
 app.UseAuthentication();
