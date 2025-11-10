@@ -38,33 +38,30 @@ public sealed class UsersController : ODataController
         return entity is null ? NotFound() : Ok(entity);
     }
 
-    //POST /odata/Users(create user WITHOUT password here)
-    //Body: entity properties except PasswordHash(not in EDM)
-    [HttpPost]
+    // ✅ CREATE: POST /odata/Users
+    [HttpPost("odata/Users")]
     public async Task<IActionResult> Post([FromBody] User user, CancellationToken ct)
     {
         if (!ModelState.IsValid) return BadRequest(ModelState);
-
-        // Minimal guardrails (add more as needed)
         if (string.IsNullOrWhiteSpace(user.PersonalNo))
             return BadRequest("PersonalNo is required.");
 
-        user.Id = 0; // ensure new
+        user.Id = 0;
         user.RegisteredAtUtc = DateTime.UtcNow;
         user.IsActive = true;
 
-        // Ensure PasswordHash stays empty here; must be set via SetPassword action
-        user.PasswordHash = user.PasswordHash is null ? "" : user.PasswordHash; // will be replaced later
+        // keep hash untouched here; set via SetPassword action
+        user.PasswordHash = user.PasswordHash is null ? "" : user.PasswordHash;
 
         _db.Users.Add(user);
         await _db.SaveChangesAsync(ct);
-
-        return Created(user); // OData 201 with entity
+        return Created(user);
     }
+
 
     // PATCH /odata/Users(1)
     // Delta<User> allows partial updates while OData still works on the entity type
-    [HttpPatch("({key})")]
+    [HttpPatch("odata/Users({key})")]
     public async Task<IActionResult> Patch([FromRoute] int key, [FromBody] Delta<User> patch, CancellationToken ct)
     {
         var entity = await _db.Users.FirstOrDefaultAsync(u => u.Id == key, ct);
@@ -80,7 +77,7 @@ public sealed class UsersController : ODataController
     }
 
     // PUT /odata/Users(1) (replace non-sensitive fields)
-    [HttpPut("({key})")]
+    [HttpPut("odata/Users({key})")]
     public async Task<IActionResult> Put([FromRoute] int key, [FromBody] User incoming, CancellationToken ct)
     {
         if (key != incoming.Id) return BadRequest();
