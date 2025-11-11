@@ -15,6 +15,9 @@ public static class EndpointMappings
         app.MapControllers();
         app.MapAuth(); // your existing extension that maps /api/auth/login
 
+        // ---- Platform endpoints ----
+        app.MapObservabilityEndpoints("/metrics");   // Prometheus scrape
+
         // Health (liveness & readiness)
         app.MapHealthChecks("/_health/live", new HealthCheckOptions
         {

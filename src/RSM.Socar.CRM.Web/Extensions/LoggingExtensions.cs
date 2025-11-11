@@ -1,4 +1,5 @@
 ﻿using Serilog;
+using Serilog.Enrichers.Span;
 using Serilog.Exceptions; // exception detail enricher
 
 namespace RSM.Socar.CRM.Web.Extensions;
@@ -13,21 +14,29 @@ public static class LoggingExtensions
     {
         builder.Host.UseSerilog((ctx, services, cfg) =>
         {
-            cfg
-                // Read from appsettings.json / appsettings.*.json -> "Serilog" section
-                .ReadFrom.Configuration(ctx.Configuration)
-                .ReadFrom.Services(services)
+            var otlp = Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT")
+                      ?? "http://localhost:4317"; // fallback for local runs
 
-                // Enrich
-                .Enrich.FromLogContext()
-                .Enrich.WithMachineName()
-                .Enrich.WithEnvironmentName()
-                .Enrich.WithProcessId()
-                .Enrich.WithThreadId()
-                .Enrich.WithExceptionDetails()
-
-                // Fallback sink if none provided in config
-                .WriteTo.Console();
+            cfg.ReadFrom.Configuration(ctx.Configuration)
+              .ReadFrom.Services(services)
+              .Enrich.FromLogContext()
+              .Enrich.WithMachineName()
+              .Enrich.WithEnvironmentName()
+              .Enrich.WithProcessId()
+              .Enrich.WithThreadId()
+              .Enrich.WithExceptionDetails()
+              .Enrich.WithSpan() // TraceId / SpanId
+              .WriteTo.Console()
+              .WriteTo.OpenTelemetry(options =>
+              {
+                  options.Endpoint = otlp; // <-- string, not Uri
+                  options.Protocol = Serilog.Sinks.OpenTelemetry.OtlpProtocol.Grpc;
+                  options.ResourceAttributes = new Dictionary<string, object?>
+                  {
+                      ["service.name"] = "RSM.Socar.CRM.Web",
+                      ["deployment.environment"] = ctx.HostingEnvironment.EnvironmentName
+                  };
+              });
         });
 
         return builder;

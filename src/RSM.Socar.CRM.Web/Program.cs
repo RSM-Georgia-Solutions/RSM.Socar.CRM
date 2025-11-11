@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using OpenTelemetry.Logs;
 using RSM.Socar.CRM.Application.Extensions;
 using RSM.Socar.CRM.Infrastructure.Extensions;
 using RSM.Socar.CRM.Web.Extensions;
@@ -6,10 +7,26 @@ using RSM.Socar.CRM.Web.Extensions;
 var builder = WebApplication.CreateBuilder(args);
 var cfg = builder.Configuration;
 
+var serviceName = "RSM.Socar.CRM.Web";
+var serviceVersion = typeof(Program).Assembly.GetName().Version?.ToString() ?? "1.0.0";
+var envName = builder.Environment.EnvironmentName;
+
 // Layers
 builder.AddLoggingLayer();
 builder.Services.AddRequestResponseBodyLogging(cfg);   // registers options + IMiddleware
 builder.Services.AddExceptionHandlingLayer(cfg);
+// register OTel
+builder.Services.AddObservabilityLayer(cfg, serviceName, serviceVersion, envName);
+
+
+builder.Logging.AddOpenTelemetry(o =>
+{
+    o.IncludeScopes = true;
+    o.IncludeFormattedMessage = true;
+    o.ParseStateValues = true;
+    o.AddOtlpExporter();                   // <- send logs to Aspire dashboard
+});
+
 
 builder.Services.AddInfrastructure(cfg, db =>
     db.UseSqlServer(
