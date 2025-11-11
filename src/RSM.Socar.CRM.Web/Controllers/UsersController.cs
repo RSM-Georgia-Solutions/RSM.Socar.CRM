@@ -1,16 +1,16 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OData.Deltas;
 using Microsoft.AspNetCore.OData.Formatter;
 using Microsoft.AspNetCore.OData.Query;
-using Microsoft.AspNetCore.OData.Results;
 using Microsoft.AspNetCore.OData.Routing.Attributes;
 using Microsoft.AspNetCore.OData.Routing.Controllers; // you already have this
-using Microsoft.AspNetCore.OData.Routing;             // sometimes needed
 using Microsoft.EntityFrameworkCore;
 using RSM.Socar.CRM.Domain.Identity;
 using RSM.Socar.CRM.Infrastructure.Persistence;
 
+[Authorize]
 [ODataRouteComponent("odata/[controller]")]
 public sealed class UsersController : ODataController
 {

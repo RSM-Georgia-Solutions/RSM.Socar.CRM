@@ -1,5 +1,4 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using OpenTelemetry.Logs;
 using RSM.Socar.CRM.Application.Extensions;
 using RSM.Socar.CRM.Infrastructure.Extensions;
 using RSM.Socar.CRM.Web.Extensions;
@@ -18,16 +17,6 @@ builder.Services.AddExceptionHandlingLayer(cfg);
 // register OTel
 builder.Services.AddObservabilityLayer(cfg, serviceName, serviceVersion, envName);
 
-
-builder.Logging.AddOpenTelemetry(o =>
-{
-    o.IncludeScopes = true;
-    o.IncludeFormattedMessage = true;
-    o.ParseStateValues = true;
-    o.AddOtlpExporter();                   // <- send logs to Aspire dashboard
-});
-
-
 builder.Services.AddInfrastructure(cfg, db =>
     db.UseSqlServer(
         cfg.GetConnectionString("Sql"),
@@ -43,7 +32,7 @@ builder.Services.AddWebLayer(cfg);
 var app = builder.Build();
 
 app.UseRequestLoggingLayer();          // Serilog request summary (optional)
-app.UseRequestResponseBodyLogging();   // <-- ADD THIS LINE (must be BEFORE controllers)
+app.UseRequestResponseBodyLogging();   // ADD THIS LINE (must be BEFORE controllers)
 
 await app.SeedDevDataAsync();
 app.UseWebPipeline();                  // this maps controllers/endpoints
