@@ -17,4 +17,6 @@ public sealed class User
 
     // NEW: credentials
     public string PasswordHash { get; set; } = default!;
+
+    public byte[] RowVersion { get; set; } = Array.Empty<byte>();
 }

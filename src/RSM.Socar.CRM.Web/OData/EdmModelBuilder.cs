@@ -17,7 +17,7 @@ public static class EdmModelBuilder
 
         // Hide PasswordHash from the OData metadata & payloads
         users.EntityType.Ignore(u => u.PasswordHash);
-
+        users.EntityType.Property(u => u.RowVersion).IsConcurrencyToken();
 
         return builder.GetEdmModel();
     }

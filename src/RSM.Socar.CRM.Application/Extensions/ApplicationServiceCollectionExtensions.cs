@@ -1,5 +1,4 @@
-﻿using MediatR;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using RSM.Socar.CRM.Application.Auth;
 
 namespace RSM.Socar.CRM.Application.Extensions;

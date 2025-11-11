@@ -28,14 +28,6 @@ public static class WebApplicationExtensions
         return app;
     }
 
-    public static WebApplication MapApiEndpoints(this WebApplication app)
-    {
-        app.MapControllers();
-        app.MapGet("/health", () => "OK");
-        app.MapAuth(); // your existing extension that maps /api/auth/login
-        return app;
-    }
-
     // optional dev seeder
     public static async Task SeedDevDataAsync(this WebApplication app)
     {

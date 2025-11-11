@@ -1,12 +1,15 @@
-﻿using System.Text;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.OData;
+using Microsoft.AspNetCore.OData.Query.Validator;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
+using RSM.Socar.CRM.Infrastructure.Persistence;
 using RSM.Socar.CRM.Infrastructure.Security;
 using RSM.Socar.CRM.Web.OData;
 using RSM.Socar.CRM.Web.Swagger;
+using System.Text;
 
 namespace RSM.Socar.CRM.Web.Extensions;
 
@@ -18,9 +21,21 @@ public static class WebServiceCollectionExtensions
             .AddJwtAuthentication(cfg)
             .AddCorsPolicy(cfg)
             .AddODataControllers()
-            .AddSwaggerWithODataDelta();
+            .AddSwaggerWithODataDelta()
+            .AddHealthCheckLayer(cfg);
 
     // --- internals used by AddWebLayer ---
+    public static IServiceCollection AddHealthCheckLayer(this IServiceCollection services, IConfiguration cfg)
+    {
+        services.AddHealthChecks()
+            // Liveness (“is the process up?”)
+            .AddCheck("self", () => HealthCheckResult.Healthy(), tags: new[] { "live" })
+
+            // Readiness (“can we serve traffic?”)
+            .AddDbContextCheck<AppDbContext>("db", failureStatus: HealthStatus.Unhealthy, tags: new[] { "ready" });
+
+        return services;
+    }
 
     public static IServiceCollection AddJwtAuthentication(this IServiceCollection services, IConfiguration cfg)
     {
@@ -57,10 +72,17 @@ public static class WebServiceCollectionExtensions
     public static IServiceCollection AddODataControllers(this IServiceCollection services)
     {
         services
-            .AddControllers()
-            .AddOData(opt =>
-                opt.AddRouteComponents("odata", EdmModelBuilder.GetEdmModel())
-                   .Select().Filter().OrderBy().Expand().Count().SetMaxTop(100));
+            .AddControllers().AddOData(opt => opt
+              .AddRouteComponents("odata", EdmModelBuilder.GetEdmModel(), services =>
+              {
+                  services.AddSingleton(new ODataValidationSettings
+                  {
+                      MaxTop = 100,
+                      MaxAnyAllExpressionDepth = 5,
+                      MaxNodeCount = 200
+                  });
+              })
+              .Select().Filter().OrderBy().Expand().Count().SetMaxTop(100));
         return services;
     }
 
