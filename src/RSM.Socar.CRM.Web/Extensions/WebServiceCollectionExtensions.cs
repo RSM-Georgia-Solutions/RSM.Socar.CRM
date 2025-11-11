@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using RSM.Socar.CRM.Application.Auth;
 using RSM.Socar.CRM.Infrastructure.Persistence;
 using RSM.Socar.CRM.Infrastructure.Security;
 using RSM.Socar.CRM.Web.OData;
@@ -92,6 +93,8 @@ public static class WebServiceCollectionExtensions
         services.AddEndpointsApiExplorer();
         services.AddSwaggerGen(c =>
         {
+            // Use full type name (including nested + namespace) to avoid collisions
+            c.CustomSchemaIds(type => type.FullName?.Replace('+', '.') ?? type.Name);
             c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
             {
                 Name = "Authorization",

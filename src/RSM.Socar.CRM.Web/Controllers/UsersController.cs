@@ -1,12 +1,12 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
+﻿using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OData.Deltas;
-using Microsoft.AspNetCore.OData.Formatter;
 using Microsoft.AspNetCore.OData.Query;
 using Microsoft.AspNetCore.OData.Routing.Attributes;
-using Microsoft.AspNetCore.OData.Routing.Controllers; // you already have this
+using Microsoft.AspNetCore.OData.Routing.Controllers;
 using Microsoft.EntityFrameworkCore;
+using RSM.Socar.CRM.Application.Users.Commands;
 using RSM.Socar.CRM.Domain.Identity;
 using RSM.Socar.CRM.Infrastructure.Persistence;
 
@@ -14,22 +14,20 @@ using RSM.Socar.CRM.Infrastructure.Persistence;
 [ODataRouteComponent("odata/[controller]")]
 public sealed class UsersController : ODataController
 {
-    private readonly AppDbContext _db;
-    private readonly IPasswordHasher<User> _hasher;
+    private readonly AppDbContext _db;   // read side for OData
+    private readonly IMediator _mediator; // write side via Application
 
-    public UsersController(AppDbContext db, IPasswordHasher<User> hasher)
+    public UsersController(AppDbContext db, IMediator mediator)
     {
         _db = db;
-        _hasher = hasher;
+        _mediator = mediator;
     }
 
-    // GET /odata/Users
+    // READS stay OData (DB-pushdown)
     [EnableQuery(PageSize = 50)]
     [HttpGet("odata/Users")]
-    public IQueryable<User> Get() =>
-        _db.Users.AsNoTracking();
+    public IQueryable<User> Get() => _db.Users.AsNoTracking();
 
-    //GET /odata/Users(1)
     [EnableQuery]
     [HttpGet("odata/Users({key})")]
     public async Task<ActionResult<User>> Get(int key, CancellationToken ct)
@@ -38,80 +36,39 @@ public sealed class UsersController : ODataController
         return entity is null ? NotFound() : Ok(entity);
     }
 
-    // ✅ CREATE: POST /odata/Users
+    // CREATE -> command
     [HttpPost("odata/Users")]
-    public async Task<IActionResult> Post([FromBody] User user, CancellationToken ct)
+    public async Task<IActionResult> Post([FromBody] CreateUserCommand.Request cmd, CancellationToken ct)
     {
-        if (!ModelState.IsValid) return BadRequest(ModelState);
-        if (string.IsNullOrWhiteSpace(user.PersonalNo))
-            return BadRequest("PersonalNo is required.");
-
-        user.Id = 0;
-        user.RegisteredAtUtc = DateTime.UtcNow;
-        user.IsActive = true;
-
-        // keep hash untouched here; set via SetPassword action
-        user.PasswordHash = user.PasswordHash is null ? "" : user.PasswordHash;
-
-        _db.Users.Add(user);
-        await _db.SaveChangesAsync(ct);
-        return Created(user);
+        var created = await _mediator.Send(cmd, ct);
+        return Created(created!);
     }
 
-
-    // PATCH /odata/Users(1)
-    // Delta<User> allows partial updates while OData still works on the entity type
-    [HttpPatch("odata/Users({key})")]
-    public async Task<IActionResult> Patch([FromRoute] int key, [FromBody] Delta<User> patch, CancellationToken ct)
-    {
-        var entity = await _db.Users.FirstOrDefaultAsync(u => u.Id == key, ct);
-        if (entity is null) return NotFound();
-
-        // Prevent changing PasswordHash via PATCH
-        patch.TryGetPropertyValue(nameof(RSM.Socar.CRM.Domain.Identity.User.PasswordHash), out var _);
-        patch.TrySetPropertyValue(nameof(RSM.Socar.CRM.Domain.Identity.User.PasswordHash), entity.PasswordHash);
-
-        patch.Patch(entity);
-        await _db.SaveChangesAsync(ct);
-        return NoContent();
-    }
-
-    // PUT /odata/Users(1) (replace non-sensitive fields)
+    // UPDATE -> command (If-Match ETag should populate RowVersion on cmd)
     [HttpPut("odata/Users({key})")]
-    public async Task<IActionResult> Put([FromRoute] int key, [FromBody] User incoming, CancellationToken ct)
+    public async Task<IActionResult> Put([FromRoute] int key, [FromBody] UpdateUserCommand.Request cmd, CancellationToken ct)
     {
-        if (key != incoming.Id) return BadRequest();
-        var entity = await _db.Users.FirstOrDefaultAsync(u => u.Id == key, ct);
-        if (entity is null) return NotFound();
-
-        // Copy over allowed fields (don’t touch PasswordHash)
-        entity.PersonalNo = incoming.PersonalNo;
-        entity.FirstName = incoming.FirstName;
-        entity.LastName = incoming.LastName;
-        entity.BirthDate = incoming.BirthDate;
-        entity.Mobile = incoming.Mobile;
-        entity.Email = incoming.Email;
-        entity.Position = incoming.Position;
-        entity.IsActive = incoming.IsActive;
-
-        await _db.SaveChangesAsync(ct);
+        if (key != cmd.Id) return BadRequest();
+        await _mediator.Send(cmd, ct);
         return NoContent();
     }
 
-    // POST /odata/Users({key})/SetPassword
-    // Body: { "password": "NewPassw0rd!" }
-    [HttpPost("({key})/SetPassword")]
-    public async Task<IActionResult> SetPassword([FromRoute] int key, ODataActionParameters parameters, CancellationToken ct)
+    // PATCH -> command
+    [HttpPatch("odata/Users({key})")]
+    public async Task<IActionResult> Patch([FromRoute] int key, [FromBody] Delta<User> delta, CancellationToken ct)
     {
-        if (!parameters.TryGetValue("password", out var pwObj) || pwObj is not string password || string.IsNullOrWhiteSpace(password))
+        await _mediator.Send(new PatchUserCommand.Request(key, delta), ct);
+        return NoContent();
+    }
+
+    public sealed record SetPasswordDto(string Password);
+    [HttpPost("odata/Users({key})/SetPassword")]
+    public async Task<IActionResult> SetPassword([FromRoute] int key, [FromBody] SetPasswordDto body, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(body?.Password))
             return BadRequest("Password is required.");
 
-        var entity = await _db.Users.FirstOrDefaultAsync(u => u.Id == key, ct);
-        if (entity is null) return NotFound();
-
-        entity.PasswordHash = _hasher.HashPassword(entity, password);
-        await _db.SaveChangesAsync(ct);
-
+        await _mediator.Send(new SetUserPasswordCommand.Request(key, body.Password), ct);
         return Ok(true);
     }
 }

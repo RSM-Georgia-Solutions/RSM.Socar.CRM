@@ -1,10 +1,13 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using RSM.Socar.CRM.Application.Abstractions;
+using RSM.Socar.CRM.Application.Auth;
+using RSM.Socar.CRM.Application.Users;
+using RSM.Socar.CRM.Domain.Identity;
 using RSM.Socar.CRM.Infrastructure.Persistence;
 using RSM.Socar.CRM.Infrastructure.Security;
-using Microsoft.AspNetCore.Identity;
-using RSM.Socar.CRM.Domain.Identity;
 
 namespace RSM.Socar.CRM.Infrastructure.Extensions;
 
@@ -37,6 +40,12 @@ public static class ServiceCollectionExtensions
                     sql => sql.EnableRetryOnFailure(5, TimeSpan.FromSeconds(10), null));
             }
         });
+
+        services.AddScoped<IUnitOfWork, UnitOfWork>();
+        services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
+
+        // Users repository
+        services.AddScoped<IUserRepository, UserRepository>();
 
         // ---- Options ----
         services.Configure<JwtOptions>(cfg.GetSection(JwtOptions.SectionName));

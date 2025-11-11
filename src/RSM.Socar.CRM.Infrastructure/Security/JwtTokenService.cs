@@ -3,14 +3,13 @@ using System.Security.Claims;
 using System.Text;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using RSM.Socar.CRM.Application.Abstractions;
+using RSM.Socar.CRM.Application.Auth;
 using RSM.Socar.CRM.Domain.Identity;
 
 namespace RSM.Socar.CRM.Infrastructure.Security;
 
-public interface IJwtTokenService
-{
-    string CreateAccessToken(User user);
-}
+
 
 public sealed class JwtTokenService(IOptions<JwtOptions> opt) : IJwtTokenService
 {

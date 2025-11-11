@@ -18,6 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\RSM.Socar.CRM.Application\RSM.Socar.CRM.Application.csproj" />
     <ProjectReference Include="..\RSM.Socar.CRM.Domain\RSM.Socar.CRM.Domain.csproj" />
   </ItemGroup>
 

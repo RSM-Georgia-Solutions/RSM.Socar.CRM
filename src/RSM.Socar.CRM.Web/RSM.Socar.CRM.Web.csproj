@@ -33,6 +33,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\RSM.Socar.CRM.Application\RSM.Socar.CRM.Application.csproj" />
+    <ProjectReference Include="..\RSM.Socar.CRM.Infrastructure\RSM.Socar.CRM.Infrastructure.csproj" />
     <ProjectReference Include="..\RSM.Socar.CRM.ServiceDefaults\RSM.Socar.CRM.ServiceDefaults.csproj" />
   </ItemGroup>
 

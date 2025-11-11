@@ -1,13 +1,15 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <PackageReference Include="FluentValidation" Version="12.1.0" />
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.0" />
     <PackageReference Include="MediatR" Version="13.1.0" />
+    <PackageReference Include="Microsoft.AspNetCore.OData" Version="9.4.1" />
     <PackageReference Include="Microsoft.Extensions.Identity.Core" Version="9.0.10" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\RSM.Socar.CRM.Domain\RSM.Socar.CRM.Domain.csproj" />
-    <ProjectReference Include="..\RSM.Socar.CRM.Infrastructure\RSM.Socar.CRM.Infrastructure.csproj" />
   </ItemGroup>
 
   <PropertyGroup>
