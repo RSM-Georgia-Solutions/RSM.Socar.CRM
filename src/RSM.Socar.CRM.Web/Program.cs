@@ -33,6 +33,7 @@ var app = builder.Build();
 
 app.UseRequestLoggingLayer();          // Serilog request summary (optional)
 app.UseRequestResponseBodyLogging();   // ADD THIS LINE (must be BEFORE controllers)
+app.UseExceptionHandlingLayer();
 
 await app.SeedDevDataAsync();
 app.UseWebPipeline();                  // this maps controllers/endpoints

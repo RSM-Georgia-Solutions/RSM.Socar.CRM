@@ -1,8 +1,5 @@
-﻿using System.Net;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace RSM.Socar.CRM.Web.Errors;
@@ -37,57 +34,50 @@ public sealed class ExceptionHandlingMiddleware : IMiddleware
         var status = ResolveStatusCode(ex);
         var traceId = ctx.TraceIdentifier;
 
-        // Log: error with enriched properties
-        _log.LogError(ex, "Unhandled exception for {Method} {Path} → {Status} (TraceId: {TraceId})",
-            ctx.Request.Method, ctx.Request.Path, status, traceId);
+        var isClientError = status is >= 400 and < 500;
+        var showDetails = _opt.IncludeExceptionDetails || isClientError;
 
-        // Prepare ProblemDetails
         var problem = new ProblemDetails
         {
             Title = GetTitleFor(status, ex),
             Status = status,
-            Detail = _opt.IncludeExceptionDetails ? ex.Message : null,
+            Detail = showDetails ? ex.Message : null,   // ← only show for 4xx or when enabled
             Instance = ctx.Request.Path,
             Type = $"https://httpstatuses.com/{status}"
         };
-
-        // Enrich with trace id (helpful in logs and responses)
         problem.Extensions["traceId"] = traceId;
 
-        // Include error code/info for well-known exceptions (optional)
-        if (ex is DbUpdateException dbEx && dbEx.InnerException is not null)
+        if (ex is FluentValidation.ValidationException vex)
         {
-            problem.Extensions["dbError"] = dbEx.InnerException.Message;
+            problem.Extensions["errors"] = vex.Errors
+                .GroupBy(e => e.PropertyName)
+                .ToDictionary(g => g.Key, g => g.Select(e => e.ErrorMessage).ToArray());
         }
 
-        if (_opt.IncludeExceptionDetails && ex.StackTrace is not null)
-        {
-            problem.Extensions["stackTrace"] = ex.StackTrace;
-        }
-
-        // Write JSON ProblemDetails
         ctx.Response.Clear();
         ctx.Response.StatusCode = status;
         ctx.Response.ContentType = "application/problem+json; charset=utf-8";
         await ctx.Response.WriteAsJsonAsync(problem);
     }
 
+
     private int ResolveStatusCode(Exception ex)
     {
-        // Exact type match via map
         if (_opt.ExceptionStatusCodeMap.TryGetValue(ex.GetType().FullName!, out var mapped))
             return mapped;
 
-        // Common fallbacks
         return ex switch
         {
-            DbUpdateConcurrencyException => StatusCodes.Status409Conflict,
-            DbUpdateException => StatusCodes.Status409Conflict,
+            FluentValidation.ValidationException => StatusCodes.Status400BadRequest,
+            UnauthorizedAccessException => StatusCodes.Status401Unauthorized,
             KeyNotFoundException => StatusCodes.Status404NotFound,
+            DbUpdateConcurrencyException => StatusCodes.Status409Conflict,
+            InvalidOperationException => StatusCodes.Status409Conflict, // e.g., duplicates
             ArgumentException => StatusCodes.Status400BadRequest,
             _ => StatusCodes.Status500InternalServerError
         };
     }
+
 
     private static string GetTitleFor(int status, Exception ex) => status switch
     {
