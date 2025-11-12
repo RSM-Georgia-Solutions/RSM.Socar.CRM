@@ -10,5 +10,5 @@ public interface IUserRepository
     // Applies the original concurrency token in the persistence layer
     void MarkConcurrencyToken(User entity, byte[] rowVersion);
     void Add(User user);
-    Task<User> GetByEmailAsync(string email, CancellationToken ct);
+    Task<User?> GetByEmailAsync(string email, CancellationToken ct);
 }

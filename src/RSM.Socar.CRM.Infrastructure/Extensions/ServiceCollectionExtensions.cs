@@ -7,6 +7,7 @@ using RSM.Socar.CRM.Application.Auth;
 using RSM.Socar.CRM.Application.Users;
 using RSM.Socar.CRM.Domain.Identity;
 using RSM.Socar.CRM.Infrastructure.Persistence;
+using RSM.Socar.CRM.Infrastructure.Persistence.Repositories;
 using RSM.Socar.CRM.Infrastructure.Security;
 
 namespace RSM.Socar.CRM.Infrastructure.Extensions;
