@@ -1,14 +1,12 @@
 ﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.OData;
 using Microsoft.AspNetCore.OData.Query.Validator;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi;
 using Microsoft.OpenApi.Models;
 using RSM.Socar.CRM.Application.Auth;
 using RSM.Socar.CRM.Infrastructure.Persistence;
-using RSM.Socar.CRM.Infrastructure.Security;
 using RSM.Socar.CRM.Web.OData;
 using RSM.Socar.CRM.Web.Swagger;
 using System.Text;

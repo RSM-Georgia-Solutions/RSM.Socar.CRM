@@ -1,6 +1,8 @@
-﻿namespace RSM.Socar.CRM.Domain.Identity;
+﻿using RSM.Socar.CRM.Domain.Common;
 
-public sealed class User
+namespace RSM.Socar.CRM.Domain.Identity;
+
+public sealed class User : IAuditable, ISoftDeletable
 {
     public int Id { get; set; }
 
@@ -19,4 +21,15 @@ public sealed class User
     public string PasswordHash { get; set; } = default!;
 
     public byte[] RowVersion { get; set; } = Array.Empty<byte>();
+
+    // Auditing
+    public DateTime CreatedAtUtc { get; set; }
+    public string? CreatedBy { get; set; }
+    public DateTime? LastModifiedAtUtc { get; set; }
+    public string? LastModifiedBy { get; set; }
+
+    // Soft delete
+    public bool IsDeleted { get; set; }
+    public DateTime? DeletedAtUtc { get; set; }
+    public string? DeletedBy { get; set; }
 }

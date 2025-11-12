@@ -1,7 +1,8 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using RSM.Socar.CRM.Domain.Identity;
-using RSM.Socar.CRM.Infrastructure.Persistence;
+
+namespace RSM.Socar.CRM.Infrastructure.Persistence.Configurations.Identity;
 
 internal sealed class UserConfig : IEntityTypeConfiguration<User>
 {
@@ -10,30 +11,33 @@ internal sealed class UserConfig : IEntityTypeConfiguration<User>
         b.ToTable("Users", Schemas.Identity);
         b.HasKey(x => x.Id);
 
-        // Requireds + lengths
-        b.Property(x => x.PersonalNo).HasMaxLength(11).IsRequired();
-        b.Property(x => x.FirstName).HasMaxLength(128).IsRequired();
-        b.Property(x => x.LastName).HasMaxLength(128).IsRequired();
-        b.Property(x => x.Email).HasMaxLength(256);
-        b.Property(x => x.Mobile).HasMaxLength(16);
-        b.Property(x => x.Position).HasMaxLength(128);
-
-        // Uniqueness
+        b.Property(x => x.PersonalNo).HasMaxLength(11);
         b.HasIndex(x => x.PersonalNo).IsUnique();
-        // Email is optional: make it unique only when not null
-        b.HasIndex(x => x.Email).IsUnique().HasFilter("[Email] IS NOT NULL");
 
-        // Audit/defaults
-        b.Property(x => x.RegisteredAtUtc)
-         .HasColumnType("datetime2")
-         .HasDefaultValueSql("SYSUTCDATETIME()");
+        b.Property(x => x.Email).HasMaxLength(256);
+        b.HasIndex(x => x.Email);
 
-        // Security
+        b.Property(x => x.Mobile).HasMaxLength(16);
+        b.Property(x => x.FirstName).HasMaxLength(128);
+        b.Property(x => x.LastName).HasMaxLength(128);
+
         b.Property(x => x.PasswordHash).IsRequired();
 
-        // Concurrency (ETag/rowversion)
-        b.Property(x => x.RowVersion)
-         .IsRowVersion()
-         .IsConcurrencyToken();
+        // Concurrency token
+        b.Property(x => x.RowVersion).IsRowVersion().IsConcurrencyToken();
+
+        // Auditing columns
+        b.Property(x => x.CreatedAtUtc).HasColumnType("datetime2");
+        b.Property(x => x.LastModifiedAtUtc).HasColumnType("datetime2");
+        b.Property(x => x.CreatedBy).HasMaxLength(128);
+        b.Property(x => x.LastModifiedBy).HasMaxLength(128);
+
+        // Soft delete columns
+        b.Property(x => x.IsDeleted).HasDefaultValue(false);
+        b.Property(x => x.DeletedAtUtc).HasColumnType("datetime2");
+        b.Property(x => x.DeletedBy).HasMaxLength(128);
+
+        // Global query filter for soft delete
+        b.HasQueryFilter(u => !u.IsDeleted);
     }
 }

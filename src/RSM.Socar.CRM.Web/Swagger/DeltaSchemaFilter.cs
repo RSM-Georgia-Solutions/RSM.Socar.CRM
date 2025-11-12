@@ -1,5 +1,4 @@
-﻿using System;
-using Swashbuckle.AspNetCore.SwaggerGen;
+﻿using Swashbuckle.AspNetCore.SwaggerGen;
 using Microsoft.OpenApi.Models;
 
 namespace RSM.Socar.CRM.Web.Swagger;

@@ -2,11 +2,13 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using RSM.Socar.CRM.Application.Abstractions;
 using RSM.Socar.CRM.Application.Auth;
 using RSM.Socar.CRM.Application.Users;
 using RSM.Socar.CRM.Domain.Identity;
 using RSM.Socar.CRM.Infrastructure.Persistence;
+using RSM.Socar.CRM.Infrastructure.Persistence.Interceptors;
 using RSM.Socar.CRM.Infrastructure.Persistence.Repositories;
 using RSM.Socar.CRM.Infrastructure.Security;
 
@@ -25,20 +27,42 @@ public static class ServiceCollectionExtensions
         IConfiguration cfg,
         Action<DbContextOptionsBuilder>? configureDb = null)
     {
-        // ---- DbContext ----
-        services.AddDbContext<AppDbContext>(options =>
+
+        services.AddHttpContextAccessor();                   // needed for CurrentUser
+        services.AddScoped<ICurrentUser, CurrentUser>();     // per request
+
+        services.AddScoped<AuditingSoftDeleteInterceptor>(); // interceptor
+
+
+        // DbContext registration that supports both caller-provided config and the interceptor
+        services.AddDbContext<AppDbContext>((sp, options) =>
         {
+            // 1) Let the host decide the provider and extras, if they passed a delegate
             if (configureDb is not null)
             {
-                // Let the host decide the provider and extras
                 configureDb(options);
             }
             else
             {
-                // Sensible default: SQL Server + retries
+                // 2) Sensible default: SQL Server + retries + migrations assembly in Infrastructure
                 options.UseSqlServer(
                     cfg.GetConnectionString("Sql"),
-                    sql => sql.EnableRetryOnFailure(5, TimeSpan.FromSeconds(10), null));
+                    sql => {
+                        sql.EnableRetryOnFailure(5, TimeSpan.FromSeconds(10), null);
+                        sql.MigrationsAssembly("RSM.Socar.CRM.Infrastructure");
+                    });
+            }
+
+            // 3) Always add the interceptor (auditing + soft-delete) after the provider is configured
+            var auditingInterceptor = sp.GetRequiredService<AuditingSoftDeleteInterceptor>();
+            options.AddInterceptors(auditingInterceptor);
+
+            // (optional) nice-to-haves, driven by config
+            var env = sp.GetRequiredService<IHostEnvironment>();
+            if (env.IsDevelopment())
+            {
+                options.EnableDetailedErrors();
+                options.EnableSensitiveDataLogging();
             }
         });
 
