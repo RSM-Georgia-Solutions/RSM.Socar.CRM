@@ -6,74 +6,107 @@ using RSM.Socar.CRM.Domain.Common;
 
 namespace RSM.Socar.CRM.Infrastructure.Persistence.Interceptors;
 
-internal sealed class AuditingSoftDeleteInterceptor(ICurrentUser currentUser) : SaveChangesInterceptor
+internal sealed class AuditingSoftDeleteInterceptor(ICurrentUser currentUser)
+    : SaveChangesInterceptor
 {
+    public override InterceptionResult<int> SavingChanges(
+        DbContextEventData eventData,
+        InterceptionResult<int> result)
+    {
+        if (eventData.Context is not DbContext db)
+            return base.SavingChanges(eventData, result);
+
+        ApplyAuditInformation(db);
+
+        return base.SavingChanges(eventData, result);
+    }
 
     public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
         DbContextEventData eventData,
         InterceptionResult<int> result,
         CancellationToken cancellationToken = default)
     {
-        var sync = SavingChanges(eventData, result);
-        return base.SavingChangesAsync(eventData, sync, cancellationToken);
+        if (eventData.Context is DbContext db)
+            ApplyAuditInformation(db);
+
+        return base.SavingChangesAsync(eventData, result, cancellationToken);
     }
 
-    public override InterceptionResult<int> SavingChanges(
-        DbContextEventData e,
-        InterceptionResult<int> result)
+    private void ApplyAuditInformation(DbContext db)
     {
-        if (e.Context is not DbContext db)
-            return base.SavingChanges(e, result);
-
-        var now = DateTime.UtcNow;
-        var user = currentUser.UserId ?? currentUser.Email ?? currentUser.UserName;
+        string? user = currentUser.UserId ?? currentUser.Email ?? currentUser.UserName;
+        DateTime now = DateTime.UtcNow;
 
         foreach (var entry in db.ChangeTracker.Entries())
         {
+            if (entry.Entity is not BaseEntity) // skip non-entities
+                continue;
+
             switch (entry.State)
             {
                 case EntityState.Added:
-                    SetCreateAudit(entry, now, user);
+                    ApplyCreateAudit(entry, now, user);
                     break;
 
                 case EntityState.Modified:
-                    SetModifyAudit(entry, now, user);
+                    ApplyModifyAudit(entry, now, user);
                     break;
 
                 case EntityState.Deleted:
-                    if (entry.Entity is ISoftDeletable soft)
-                    {
-                        entry.State = EntityState.Modified;
-                        soft.IsDeleted = true;
-                        soft.DeletedAtUtc = now;
-                        soft.DeletedBy = user;
-
-                        SetModifyAudit(entry, now, user);
-                    }
+                    ApplySoftDelete(entry, now, user);
                     break;
             }
         }
-
-        return base.SavingChanges(e, result);
     }
 
-    private static void SetCreateAudit(EntityEntry entry, DateTime now, string? user)
+    private void ApplyCreateAudit(EntityEntry entry, DateTime now, string? user)
     {
         if (entry.Entity is IAuditable a)
         {
-            a.CreatedAtUtc = a.CreatedAtUtc == default ? now : a.CreatedAtUtc; // don’t override seed
+            // Only set CreatedAt for new entities (not for seeded data)
+            if (a.CreatedAtUtc == default)
+                a.CreatedAtUtc = now;
+
             a.CreatedBy ??= user;
+
+            // New entities should not have modification metadata
             a.LastModifiedAtUtc = null;
             a.LastModifiedBy = null;
         }
-        if (entry.Entity is ISoftDeletable s)
+
+        if (entry.Entity is ISoftDeletable soft)
         {
-            s.IsDeleted = s.IsDeleted && s.DeletedAtUtc != null; // keep seed choice if any
+            // Leave IsDeleted untouched if seeded as deleted
+            if (!soft.IsDeleted)
+            {
+                soft.DeletedAtUtc = null;
+                soft.DeletedBy = null;
+            }
         }
     }
 
-    private static void SetModifyAudit(EntityEntry entry, DateTime now, string? user)
+    private void ApplyModifyAudit(EntityEntry entry, DateTime now, string? user)
     {
+        if (entry.Entity is IAuditable a)
+        {
+            a.LastModifiedAtUtc = now;
+            a.LastModifiedBy = user;
+        }
+    }
+
+    private void ApplySoftDelete(EntityEntry entry, DateTime now, string? user)
+    {
+        if (entry.Entity is not ISoftDeletable soft)
+            return;
+
+        // Convert hard delete → soft delete
+        entry.State = EntityState.Modified;
+
+        soft.IsDeleted = true;
+        soft.DeletedAtUtc = now;
+        soft.DeletedBy = user;
+
+        // Also update LastModified metadata if applicable
         if (entry.Entity is IAuditable a)
         {
             a.LastModifiedAtUtc = now;
