@@ -7,14 +7,14 @@ public static class ExceptionHandlingExtensions
     public static IServiceCollection AddExceptionHandlingLayer(this IServiceCollection services, IConfiguration cfg)
     {
         services.Configure<ExceptionHandlingOptions>(cfg.GetSection("ExceptionHandling"));
-        services.AddTransient<ExceptionHandlingMiddleware>();
+        services.AddTransient<ErrorHandlingMiddleware>();
         return services;
     }
 
     public static WebApplication UseExceptionHandlingLayer(this WebApplication app)
     {
         // This should be one of the first middlewares, so we catch everything after.
-        app.UseMiddleware<ExceptionHandlingMiddleware>();
+        app.UseMiddleware<ErrorHandlingMiddleware>();
         return app;
     }
 }

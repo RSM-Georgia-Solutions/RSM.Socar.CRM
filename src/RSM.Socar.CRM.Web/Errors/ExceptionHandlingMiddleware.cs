@@ -1,91 +1,135 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using FluentValidation;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
+using System.Text.Json;
 
-namespace RSM.Socar.CRM.Web.Errors;
-
-public sealed class ExceptionHandlingMiddleware : IMiddleware
+public sealed class ErrorHandlingMiddleware : IMiddleware
 {
-    private readonly ILogger<ExceptionHandlingMiddleware> _log;
-    private readonly ExceptionHandlingOptions _opt;
+    private readonly ILogger<ErrorHandlingMiddleware> _logger;
 
-    public ExceptionHandlingMiddleware(
-        ILogger<ExceptionHandlingMiddleware> log,
-        IOptions<ExceptionHandlingOptions> options)
+    public ErrorHandlingMiddleware(ILogger<ErrorHandlingMiddleware> logger)
     {
-        _log = log;
-        _opt = options.Value;
+        _logger = logger;
     }
 
-    public async Task InvokeAsync(HttpContext ctx, RequestDelegate next)
+    public async Task InvokeAsync(HttpContext context, RequestDelegate next)
     {
+        string correlationId = Guid.NewGuid().ToString("N");
+        context.Response.Headers["X-Correlation-ID"] = correlationId;
+
         try
         {
-            await next(ctx);
+            await next(context);
         }
         catch (Exception ex)
         {
-            await HandleAsync(ctx, ex);
+            _logger.LogError(ex,
+                "Unhandled exception. Path: {Path}, CorrelationId: {CorrelationId}",
+                context.Request.Path,
+                correlationId);
+
+            await WriteProblemDetails(context, ex, correlationId);
         }
     }
 
-    private async Task HandleAsync(HttpContext ctx, Exception ex)
+    private static async Task WriteProblemDetails(
+    HttpContext context,
+    Exception ex,
+    string correlationId)
     {
-        var status = ResolveStatusCode(ex);
-        var traceId = ctx.TraceIdentifier;
-
-        var isClientError = status is >= 400 and < 500;
-        var showDetails = _opt.IncludeExceptionDetails || isClientError;
-
-        var problem = new ProblemDetails
+        var problem = ex switch
         {
-            Title = GetTitleFor(status, ex),
-            Status = status,
-            Detail = showDetails ? ex.Message : null,   // ← only show for 4xx or when enabled
-            Instance = ctx.Request.Path,
-            Type = $"https://httpstatuses.com/{status}"
+            UnauthorizedAccessException => new ProblemDetails
+            {
+                Title = "Unauthorized",
+                Status = 401,
+                Detail = "Access denied.",
+                Type = "https://httpstatuses.com/401"
+            },
+
+            KeyNotFoundException => new ProblemDetails
+            {
+                Title = "Not Found",
+                Status = 404,
+                Detail = ex.Message,
+                Type = "https://httpstatuses.com/404"
+            },
+
+            DbUpdateConcurrencyException => new ProblemDetails
+            {
+                Title = "Concurrency Conflict",
+                Status = 409,
+                Detail = "The resource was modified by another request.",
+                Type = "https://yourdomain.com/errors/concurrency"
+            },
+
+            DbUpdateException dbex when IsUniqueConstraintViolation(dbex) => new ProblemDetails
+            {
+                Title = "Duplicate Value",
+                Status = 409,
+                Detail = ExtractConstraintMessage(dbex),
+                Type = "https://yourdomain.com/errors/duplicate"
+            },
+
+
+            FluentValidation.ValidationException v =>
+                new ValidationProblemDetails(ToModelState(v))
+                {
+                    Status = 400,
+                    Title = "Validation Failed",
+                    Type = "https://yourdomain.com/errors/validation"
+                },
+
+            _ => new ProblemDetails
+            {
+                Title = "Internal Server Error",
+                Status = 500,
+                Detail = ex.Message,
+                Type = "https://httpstatuses.com/500"
+            }
         };
-        problem.Extensions["traceId"] = traceId;
 
-        if (ex is FluentValidation.ValidationException vex)
+        problem.Extensions["correlationId"] = correlationId;
+
+        context.Response.StatusCode = problem.Status ?? 500;
+        context.Response.ContentType = "application/problem+json";
+
+        var json = JsonSerializer.Serialize(problem,
+            new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+
+        await context.Response.WriteAsync(json);
+    }
+
+    private static bool IsUniqueConstraintViolation(DbUpdateException ex)
+    {
+        if (ex.InnerException is not SqlException sqlEx)
+            return false;
+
+        return sqlEx.Number is 2601 or 2627;
+    }
+
+    private static string ExtractConstraintMessage(DbUpdateException ex)
+    {
+        // You can customize mapping to friendly field names
+        if (ex.InnerException is SqlException sqlEx)
         {
-            problem.Extensions["errors"] = vex.Errors
-                .GroupBy(e => e.PropertyName)
-                .ToDictionary(g => g.Key, g => g.Select(e => e.ErrorMessage).ToArray());
+            if (sqlEx.Number is 2601 or 2627)
+                return "A record with the same unique value already exists.";
         }
 
-        ctx.Response.Clear();
-        ctx.Response.StatusCode = status;
-        ctx.Response.ContentType = "application/problem+json; charset=utf-8";
-        await ctx.Response.WriteAsJsonAsync(problem);
+        return "Database update failed.";
     }
 
 
-    private int ResolveStatusCode(Exception ex)
+    private static ModelStateDictionary ToModelState(ValidationException exception)
     {
-        if (_opt.ExceptionStatusCodeMap.TryGetValue(ex.GetType().FullName!, out var mapped))
-            return mapped;
+        var modelState = new ModelStateDictionary();
 
-        return ex switch
-        {
-            FluentValidation.ValidationException => StatusCodes.Status400BadRequest,
-            UnauthorizedAccessException => StatusCodes.Status401Unauthorized,
-            KeyNotFoundException => StatusCodes.Status404NotFound,
-            DbUpdateConcurrencyException => StatusCodes.Status409Conflict,
-            InvalidOperationException => StatusCodes.Status409Conflict, // e.g., duplicates
-            ArgumentException => StatusCodes.Status400BadRequest,
-            _ => StatusCodes.Status500InternalServerError
-        };
+        foreach (var error in exception.Errors)
+            modelState.AddModelError(error.PropertyName, error.ErrorMessage);
+
+        return modelState;
     }
-
-
-    private static string GetTitleFor(int status, Exception ex) => status switch
-    {
-        StatusCodes.Status400BadRequest => "Bad Request",
-        StatusCodes.Status401Unauthorized => "Unauthorized",
-        StatusCodes.Status403Forbidden => "Forbidden",
-        StatusCodes.Status404NotFound => "Not Found",
-        StatusCodes.Status409Conflict => "Conflict",
-        _ => "An unexpected error occurred"
-    };
 }
