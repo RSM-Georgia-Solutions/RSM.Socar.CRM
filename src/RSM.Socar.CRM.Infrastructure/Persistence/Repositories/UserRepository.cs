@@ -36,6 +36,8 @@ internal sealed class UserRepository(AppDbContext db) : IUserRepository
             entry.Property(name).IsModified = true;
     }
 
+    public void Remove(User user) => db.Users.Remove(user);
+
 
     // inside UserRepository (Infrastructure)
     public void MarkConcurrencyToken(User entity, byte[] rowVersion)

@@ -1,6 +1,5 @@
 ﻿using FluentValidation;
 using MediatR;
-using Microsoft.Extensions.DependencyInjection;
 using RSM.Socar.CRM.Application.Abstractions; // IUnitOfWork
 using RSM.Socar.CRM.Domain.Identity;
 
@@ -20,16 +19,10 @@ namespace RSM.Socar.CRM.Application.Users.Commands
             string? Position
         ) : IRequest<User>;
 
-        public sealed class Handler : IRequestHandler<Request, User>
+        public sealed class Handler(IUserRepository users, IUnitOfWork uom) : IRequestHandler<Request, User>
         {
-            private readonly IUserRepository _users;
-            private readonly IUnitOfWork _uow;
-
-            public Handler(IServiceProvider services)
-            {
-                _users = services.GetRequiredService<IUserRepository>();
-                _uow = services.GetRequiredService<IUnitOfWork>();
-            }
+            private readonly IUserRepository _users = users;
+            private readonly IUnitOfWork _uow = uom;
 
             public async Task<User> Handle(Request req, CancellationToken ct)
             {

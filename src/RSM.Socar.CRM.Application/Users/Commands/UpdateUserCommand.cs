@@ -46,16 +46,10 @@ public abstract class UpdateUserCommand
     }
 
     // ---------- Handler ----------
-    public sealed class Handler : IRequestHandler<Request>
+    public sealed class Handler(IUserRepository users, IUnitOfWork uom) : IRequestHandler<Request>
     {
-        private readonly IUserRepository _users;
-        private readonly IUnitOfWork _uow;
-
-        public Handler(IServiceProvider services)
-        {
-            _users = services.GetRequiredService<IUserRepository>();
-            _uow = services.GetRequiredService<IUnitOfWork>();
-        }
+        private readonly IUserRepository _users = users;
+        private readonly IUnitOfWork _uow = uom;
 
         public async Task Handle(Request cmd, CancellationToken ct)
         {

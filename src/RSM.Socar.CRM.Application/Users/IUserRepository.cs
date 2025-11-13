@@ -13,4 +13,5 @@ public interface IUserRepository
     void Add(User user);
     Task<User?> GetByEmailAsync(string email, CancellationToken ct);
     void ApplyDelta(User entity, Delta<User> delta);
+    void Remove(User entity);
 }

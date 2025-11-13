@@ -1,7 +1,6 @@
 ﻿using FluentValidation;
 using MediatR;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.DependencyInjection;
 using RSM.Socar.CRM.Application.Abstractions; // IUnitOfWork
 using RSM.Socar.CRM.Domain.Identity;
 
@@ -9,31 +8,33 @@ namespace RSM.Socar.CRM.Application.Users.Commands
 {
     public abstract class SetUserPasswordCommand
     {
-        public sealed record Request(int UserId, string Password) : IRequest;
+        public sealed record Request(int UserId, string Password, byte[] RowVersion) : IRequest;
 
-        public sealed class Handler : IRequestHandler<Request>
+        public sealed class Handler(
+            IUserRepository users,
+            IUnitOfWork uow,
+            IPasswordHasher<User> hasher) : IRequestHandler<Request>
         {
-            private readonly IUserRepository _users;
-            private readonly IUnitOfWork _uow;
-            private readonly IPasswordHasher<User> _hasher;
-
-            public Handler(IServiceProvider services)
-            {
-                _users = services.GetRequiredService<IUserRepository>();
-                _uow = services.GetRequiredService<IUnitOfWork>();
-                _hasher = services.GetRequiredService<IPasswordHasher<User>>();
-            }
+            private readonly IUserRepository _users = users;
+            private readonly IUnitOfWork _uow = uow;
+            private readonly IPasswordHasher<User> _hasher = hasher;
 
             public async Task Handle(Request request, CancellationToken ct)
             {
-                var user = await _users.GetByIdAsync(request.UserId, ct);
-                if (user is null)
-                    throw new KeyNotFoundException($"User {request.UserId} not found.");
+                var user = await _users.GetByIdAsync(request.UserId, ct)
+                    ?? throw new KeyNotFoundException($"User {request.UserId} not found.");
 
+                // 🔥 Critical: apply concurrency token
+                _users.MarkConcurrencyToken(user, request.RowVersion);
+
+                // Update password
                 user.PasswordHash = _hasher.HashPassword(user, request.Password);
+
                 await _uow.SaveChangesAsync(ct);
             }
         }
+
+
 
         public sealed class Validator : AbstractValidator<Request>
         {
