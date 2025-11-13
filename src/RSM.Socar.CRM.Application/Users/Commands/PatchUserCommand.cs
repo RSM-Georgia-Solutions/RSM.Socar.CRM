@@ -41,16 +41,7 @@ public abstract class PatchUserCommand
             if (entity is null)
                 throw new KeyNotFoundException($"User {cmd.Id} not found.");
 
-            // Disallow changing sensitive fields via PATCH
-            cmd.Patch.TryGetPropertyValue(nameof(User.PasswordHash), out _);
-            cmd.Patch.TrySetPropertyValue(nameof(User.PasswordHash), entity.PasswordHash);
-
-            // Optional: whitelist fields (example)
-            // var changed = cmd.Patch.GetChangedPropertyNames();
-            // if (changed.Any(n => n is nameof(User.RowVersion) or nameof(User.Id)))
-            //     throw new InvalidOperationException("Cannot modify Id/RowVersion via PATCH.");
-
-            cmd.Patch.Patch(entity);
+            _users.ApplyDelta(entity, cmd.Patch);
             await _uow.SaveChangesAsync(ct);
         }
     }

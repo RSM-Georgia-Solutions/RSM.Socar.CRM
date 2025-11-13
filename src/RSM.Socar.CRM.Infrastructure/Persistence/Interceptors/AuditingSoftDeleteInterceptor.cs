@@ -8,32 +8,49 @@ namespace RSM.Socar.CRM.Infrastructure.Persistence.Interceptors;
 
 internal sealed class AuditingSoftDeleteInterceptor(ICurrentUser currentUser) : SaveChangesInterceptor
 {
-    public override InterceptionResult<int> SavingChanges(DbContextEventData e, InterceptionResult<int> result)
+
+    public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
+        DbContextEventData eventData,
+        InterceptionResult<int> result,
+        CancellationToken cancellationToken = default)
     {
-        if (e.Context is not DbContext db) return base.SavingChanges(e, result);
+        var sync = SavingChanges(eventData, result);
+        return base.SavingChangesAsync(eventData, sync, cancellationToken);
+    }
+
+    public override InterceptionResult<int> SavingChanges(
+        DbContextEventData e,
+        InterceptionResult<int> result)
+    {
+        if (e.Context is not DbContext db)
+            return base.SavingChanges(e, result);
 
         var now = DateTime.UtcNow;
         var user = currentUser.UserId ?? currentUser.Email ?? currentUser.UserName;
 
         foreach (var entry in db.ChangeTracker.Entries())
         {
-            if (entry.State == EntityState.Added)
-                SetCreateAudit(entry, now, user);
-
-            if (entry.State == EntityState.Modified)
-                SetModifyAudit(entry, now, user);
-
-            if (entry.State == EntityState.Deleted)
+            switch (entry.State)
             {
-                // turn hard delete into soft delete
-                if (entry.Entity is ISoftDeletable soft)
-                {
-                    entry.State = EntityState.Modified;
-                    soft.IsDeleted = true;
-                    soft.DeletedAtUtc = now;
-                    soft.DeletedBy = user;
+                case EntityState.Added:
+                    SetCreateAudit(entry, now, user);
+                    break;
+
+                case EntityState.Modified:
                     SetModifyAudit(entry, now, user);
-                }
+                    break;
+
+                case EntityState.Deleted:
+                    if (entry.Entity is ISoftDeletable soft)
+                    {
+                        entry.State = EntityState.Modified;
+                        soft.IsDeleted = true;
+                        soft.DeletedAtUtc = now;
+                        soft.DeletedBy = user;
+
+                        SetModifyAudit(entry, now, user);
+                    }
+                    break;
             }
         }
 
