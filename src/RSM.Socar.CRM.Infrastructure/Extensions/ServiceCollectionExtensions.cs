@@ -69,6 +69,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 
+        services.AddScoped<IDbExecutionStrategy, DbExecutionStrategy>();
+        services.AddScoped<IDbTransactionFactory, DbTransactionFactory>();
+
         // Users repository
         services.AddScoped<IUserRepository, UserRepository>();
 

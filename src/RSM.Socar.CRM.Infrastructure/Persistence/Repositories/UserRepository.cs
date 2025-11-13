@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.OData.Deltas;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using RSM.Socar.CRM.Application.Users;
 using RSM.Socar.CRM.Domain.Identity;
 
@@ -27,14 +26,6 @@ internal sealed class UserRepository(AppDbContext db) : IUserRepository
 
     public void Add(User user) => db.Users.Add(user);
 
-    public void ApplyDelta(User entity, Delta<User> delta)
-    {
-        delta.Patch(entity);
-        var entry = db.Entry(entity);
-
-        foreach (var name in delta.GetChangedPropertyNames())
-            entry.Property(name).IsModified = true;
-    }
 
     public void Remove(User user) => db.Users.Remove(user);
 

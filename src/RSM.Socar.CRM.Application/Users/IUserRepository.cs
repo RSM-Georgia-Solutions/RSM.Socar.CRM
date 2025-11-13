@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.OData.Deltas;
-using RSM.Socar.CRM.Domain.Identity;
+﻿using RSM.Socar.CRM.Domain.Identity;
 
 namespace RSM.Socar.CRM.Application.Users;
 
@@ -12,6 +11,5 @@ public interface IUserRepository
     void MarkConcurrencyToken(User entity, byte[] rowVersion);
     void Add(User user);
     Task<User?> GetByEmailAsync(string email, CancellationToken ct);
-    void ApplyDelta(User entity, Delta<User> delta);
     void Remove(User entity);
 }
