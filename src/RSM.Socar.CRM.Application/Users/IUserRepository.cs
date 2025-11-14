@@ -12,4 +12,5 @@ public interface IUserRepository
     void Add(User user);
     Task<User?> GetByEmailAsync(string email, CancellationToken ct);
     void Remove(User entity);
+    Task<User?> GetByIdWithRolesAndPermissionsAsync(int id, CancellationToken ct);
 }

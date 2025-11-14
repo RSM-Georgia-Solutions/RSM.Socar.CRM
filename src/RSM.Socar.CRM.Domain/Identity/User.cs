@@ -25,4 +25,7 @@ public sealed class User : AuditableEntity
     /// Hashed password. Always required.
     /// </summary>
     public string PasswordHash { get; set; } = default!;
+
+    public ICollection<UserRole> Roles { get; set; } = [];
+    public ICollection<UserPermission> Permissions { get; set; } = [];
 }

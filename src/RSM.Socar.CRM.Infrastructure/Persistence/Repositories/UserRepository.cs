@@ -30,6 +30,21 @@ internal sealed class UserRepository(AppDbContext db) : IUserRepository
     public void Remove(User user) => db.Users.Remove(user);
 
 
+    public async Task<User?> GetByIdWithRolesAndPermissionsAsync(int id, CancellationToken ct)
+    {
+        return await db.Users
+            .AsNoTracking()
+            .Include(u => u.Roles)
+                .ThenInclude(ur => ur.Role)
+                    .ThenInclude(r => r.RolePermissions)
+                        .ThenInclude(rp => rp.Permission)
+            .Include(u => u.Permissions)
+                .ThenInclude(up => up.Permission)
+            .FirstOrDefaultAsync(u => u.Id == id, ct);
+    }
+
+
+
     // inside UserRepository (Infrastructure)
     public void MarkConcurrencyToken(User entity, byte[] rowVersion)
     {
