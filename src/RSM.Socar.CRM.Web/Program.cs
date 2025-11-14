@@ -27,6 +27,7 @@ builder.Services.AddInfrastructure(cfg, db =>
         }));
 
 builder.Services.AddApplicationLayer();
+builder.Services.AddSecurityServices();
 builder.Services.AddWebLayer(cfg);
 
 var app = builder.Build();
@@ -34,6 +35,9 @@ var app = builder.Build();
 app.UseRequestLoggingLayer();          // Serilog request summary (optional)
 app.UseRequestResponseBodyLogging();   // ADD THIS LINE (must be BEFORE controllers)
 app.UseExceptionHandlingLayer();
+
+await app.SeedSecurityDataAsync();
+await app.SeedDevDataAsync();
 
 await app.SeedDevDataAsync();
 app.UseWebPipeline();                  // this maps controllers/endpoints

@@ -2,15 +2,12 @@
 
 public sealed class PermissionRegistry : IPermissionRegistry
 {
-    private readonly List<string> _permissions =
-    [
-        "User.Read",
-        "User.Create",
-        "User.Update",
-        "User.Delete",
-        "User.SetPassword"
-        // Add more later → auto-generation can replace this.
-    ];
+    private readonly HashSet<string> _permissions = new(StringComparer.OrdinalIgnoreCase);
 
-    public IReadOnlyList<string> GetAllPermissions() => _permissions;
+    public void Register(string permission)
+    {
+        _permissions.Add(permission);
+    }
+
+    public IReadOnlyCollection<string> GetAllPermissions() => _permissions;
 }

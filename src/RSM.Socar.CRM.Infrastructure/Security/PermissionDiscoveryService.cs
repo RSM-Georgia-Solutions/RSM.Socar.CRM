@@ -1,59 +1,102 @@
 ﻿using System.Reflection;
 using RSM.Socar.CRM.Domain.Common;
-using RSM.Socar.CRM.Domain.Identity;
-using Microsoft.EntityFrameworkCore;
 
 namespace RSM.Socar.CRM.Infrastructure.Security;
 
 public interface IPermissionDiscoveryService
 {
-    Task<List<Permission>> DiscoverAsync();
+    Task<List<string>> DiscoverAsync();
 }
 
 public sealed class PermissionDiscoveryService : IPermissionDiscoveryService
 {
-    private readonly Assembly _domainAssembly;
+    private readonly Assembly[] _assemblies;
 
     public PermissionDiscoveryService()
     {
-        _domainAssembly = typeof(BaseEntity).Assembly;
+        _assemblies =
+        [
+            typeof(BaseEntity).Assembly,                       // Domain
+            Assembly.Load("RSM.Socar.CRM.Web")                // Web (reflection only)
+        ];
     }
 
-    public Task<List<Permission>> DiscoverAsync()
+    public Task<List<string>> DiscoverAsync()
     {
-        var permissions = new List<Permission>();
+        var output = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        var entities = _domainAssembly
+        foreach (var asm in _assemblies)
+            ScanEntities(asm, output);
+
+        foreach (var asm in _assemblies)
+            ScanControllersForRequirePermission(asm, output);
+
+        return Task.FromResult(output.ToList());
+    }
+
+    // ---------------------------------------------------------------------
+    // ENTITY CRUD + COLUMN PERMISSIONS
+    // ---------------------------------------------------------------------
+    private static void ScanEntities(Assembly asm, HashSet<string> output)
+    {
+        var entities = asm
             .GetTypes()
             .Where(t => t.IsClass && !t.IsAbstract && t.IsAssignableTo(typeof(BaseEntity)));
 
         foreach (var entity in entities)
         {
-            var entityName = entity.Name;
+            var name = entity.Name;
 
-            // Basic CRUD
-            permissions.AddRange(new[]
-            {
-                New($"{entityName}.Read"),
-                New($"{entityName}.Create"),
-                New($"{entityName}.Update"),
-                New($"{entityName}.Delete"),
-            });
+            output.Add($"{name}.Read");
+            output.Add($"{name}.Create");
+            output.Add($"{name}.Update");
+            output.Add($"{name}.Delete");
 
-            // Column-level permissions
-            foreach (var prop in entity.GetProperties())
+            foreach (var p in entity.GetProperties())
             {
-                if (prop.PropertyType.Namespace == "System") // exclude nav
+                if (IsPrimitive(p.PropertyType))
                 {
-                    permissions.Add(New($"{entityName}.Property.{prop.Name}.Read"));
-                    permissions.Add(New($"{entityName}.Property.{prop.Name}.Update"));
+                    output.Add($"{name}.Property.{p.Name}.Read");
+                    output.Add($"{name}.Property.{p.Name}.Update");
                 }
             }
         }
-
-        return Task.FromResult(permissions);
     }
 
-    private static Permission New(string name) =>
-        new Permission { Name = name };
+    private static bool IsPrimitive(Type type)
+    {
+        return type.IsPrimitive ||
+               type == typeof(string) ||
+               type == typeof(DateTime) ||
+               type == typeof(decimal) ||
+               type.IsEnum;
+    }
+
+    // ---------------------------------------------------------------------
+    // SCAN CONTROLLERS FOR [RequirePermission("X")]
+    // But WITHOUT referencing the attribute type directly
+    // ---------------------------------------------------------------------
+    private static void ScanControllersForRequirePermission(Assembly asm, HashSet<string> output)
+    {
+        foreach (var type in asm.GetTypes().Where(t => t.IsClass && t.Name.EndsWith("Controller")))
+        {
+            foreach (var method in type.GetMethods())
+            {
+                foreach (var attr in method.GetCustomAttributes())
+                {
+                    var attrType = attr.GetType();
+
+                    if (attrType.Name == "RequirePermissionAttribute")
+                    {
+                        // read property "Permission"
+                        var nameProp = attrType.GetProperty("Permission");
+                        var perm = nameProp?.GetValue(attr) as string;
+
+                        if (!string.IsNullOrWhiteSpace(perm))
+                            output.Add(perm);
+                    }
+                }
+            }
+        }
+    }
 }

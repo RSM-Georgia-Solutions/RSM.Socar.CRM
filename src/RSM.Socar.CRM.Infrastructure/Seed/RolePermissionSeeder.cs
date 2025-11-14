@@ -18,36 +18,65 @@ public sealed class RolePermissionSeeder
 
     public async Task SeedAsync()
     {
-        var discovered = await _scanner.DiscoverAsync();
-        var existing = await _db.Permissions.AsNoTracking().ToListAsync();
+        // ---------------------------------------------------------
+        // 1) Discover all permission names (from tables, columns, attributes)
+        // ---------------------------------------------------------
+        var discoveredNames = await _scanner.DiscoverAsync();
 
-        // Insert missing
-        foreach (var p in discovered)
+        // Load existing permissions
+        var existing = await _db.Permissions.AsNoTracking().ToListAsync();
+        var existingNames = existing.Select(p => p.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        // ---------------------------------------------------------
+        // 2) Insert missing permissions
+        // ---------------------------------------------------------
+        foreach (var name in discoveredNames)
         {
-            if (existing.All(x => x.Name != p.Name))
-                _db.Permissions.Add(p);
+            if (!existingNames.Contains(name))
+            {
+                _db.Permissions.Add(new Permission
+                {
+                    Name = name,
+                    Description = null
+                });
+            }
         }
 
         await _db.SaveChangesAsync();
 
-        // Admin Role
+        // Reload permissions after insert
+        var allPermissions = await _db.Permissions.ToListAsync();
+
+        // ---------------------------------------------------------
+        // 3) Ensure Admin role exists
+        // ---------------------------------------------------------
         var admin = await _db.Roles
             .Include(r => r.RolePermissions)
             .FirstOrDefaultAsync(r => r.Name == "Admin");
 
         if (admin is null)
         {
-            admin = new Role { Name = "Admin", Description = "System Administrator" };
+            admin = new Role
+            {
+                Name = "Admin",
+                Description = "System Administrator"
+            };
+
             _db.Roles.Add(admin);
             await _db.SaveChangesAsync();
         }
 
-        // Assign all permissions
-        var allPermissions = await _db.Permissions.ToListAsync();
+        // Admin existing permissions
+        var adminPermissionIds = admin.RolePermissions
+            .Select(rp => rp.PermissionId)
+            .ToHashSet();
 
+        // ---------------------------------------------------------
+        // 4) Give Admin ALL permissions
+        // ---------------------------------------------------------
         foreach (var p in allPermissions)
         {
-            if (admin.RolePermissions.All(rp => rp.PermissionId != p.Id))
+            if (!adminPermissionIds.Contains(p.Id))
             {
                 admin.RolePermissions.Add(new RolePermission
                 {

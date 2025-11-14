@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.Extensions.DependencyInjection;
 using RSM.Socar.CRM.Web.Security;
 
 namespace RSM.Socar.CRM.Web.Extensions;
@@ -12,7 +11,7 @@ public static class SecurityServiceCollectionExtensions
         services.AddScoped<IPermissionEvaluator, PermissionEvaluator>();
 
         // Authorization handler that checks permissions
-        services.AddSingleton<IAuthorizationHandler, PermissionAuthorizationHandler>();
+        services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
 
         // Custom policy provider to support "Permission:XYZ"
         services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
