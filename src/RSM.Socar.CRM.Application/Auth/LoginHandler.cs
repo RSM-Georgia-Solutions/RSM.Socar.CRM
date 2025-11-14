@@ -2,7 +2,6 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
 using RSM.Socar.CRM.Application.Abstractions;   // IJwtTokenService (interface living in Application)
-using RSM.Socar.CRM.Application.Users;         // IUserRepository
 using RSM.Socar.CRM.Domain.Identity;
 
 namespace RSM.Socar.CRM.Application.Auth;

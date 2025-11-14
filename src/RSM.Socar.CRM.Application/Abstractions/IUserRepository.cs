@@ -1,6 +1,6 @@
 ﻿using RSM.Socar.CRM.Domain.Identity;
 
-namespace RSM.Socar.CRM.Application.Users;
+namespace RSM.Socar.CRM.Application.Abstractions;
 
 public interface IUserRepository
 {
@@ -13,4 +13,14 @@ public interface IUserRepository
     Task<User?> GetByEmailAsync(string email, CancellationToken ct);
     void Remove(User entity);
     Task<User?> GetByIdWithRolesAndPermissionsAsync(int id, CancellationToken ct);
+
+    void AddRole(UserRole entity);
+    void RemoveRole(UserRole entity);
+
+    void AddPermission(UserPermission entity);
+    void RemovePermission(UserPermission entity);
+
+
+    Task<bool> HasRoleAsync(int userId, int roleId, CancellationToken ct);
+    Task<bool> HasPermissionAsync(int userId, int permissionId, CancellationToken ct);
 }

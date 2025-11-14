@@ -5,7 +5,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using RSM.Socar.CRM.Application.Abstractions;
 using RSM.Socar.CRM.Application.Auth;
-using RSM.Socar.CRM.Application.Users;
 using RSM.Socar.CRM.Domain.Identity;
 using RSM.Socar.CRM.Infrastructure.Persistence;
 using RSM.Socar.CRM.Infrastructure.Persistence.Interceptors;
@@ -78,6 +77,9 @@ public static class ServiceCollectionExtensions
 
         // Users repository
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IRoleRepository, RoleRepository>();
+        services.AddScoped<IPermissionRepository, PermissionRepository>();
+
 
         // ---- Options ----
         services.Configure<JwtOptions>(cfg.GetSection(JwtOptions.SectionName));

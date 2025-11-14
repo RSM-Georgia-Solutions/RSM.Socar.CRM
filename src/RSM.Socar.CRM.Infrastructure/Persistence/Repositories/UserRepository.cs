@@ -1,5 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using RSM.Socar.CRM.Application.Users;
+using RSM.Socar.CRM.Application.Abstractions;
 using RSM.Socar.CRM.Domain.Identity;
 
 namespace RSM.Socar.CRM.Infrastructure.Persistence.Repositories;
@@ -43,6 +43,28 @@ internal sealed class UserRepository(AppDbContext db) : IUserRepository
             .FirstOrDefaultAsync(u => u.Id == id, ct);
     }
 
+
+    public void AddRole(UserRole entity) => db.UserRoles.Add(entity);
+
+    public void RemoveRole(UserRole entity) => db.UserRoles.Remove(entity);
+
+    // -------------------------
+    // NEW Permission helpers
+    // -------------------------
+
+
+    public void AddPermission(UserPermission entity)
+        => db.UserPermissions.Add(entity);
+
+    public void RemovePermission(UserPermission entity)
+        => db.UserPermissions.Remove(entity);
+
+    public async Task<bool> HasRoleAsync(int userId, int roleId, CancellationToken ct)
+       => await db.UserRoles.AnyAsync(x => x.UserId == userId && x.RoleId == roleId, ct);
+
+    public async Task<bool> HasPermissionAsync(int userId, int permissionId, CancellationToken ct)
+        => await db.UserPermissions.AnyAsync(x =>
+            x.UserId == userId && x.PermissionId == permissionId, ct);
 
 
     // inside UserRepository (Infrastructure)

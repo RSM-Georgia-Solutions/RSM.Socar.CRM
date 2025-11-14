@@ -1,5 +1,4 @@
 ﻿using RSM.Socar.CRM.Application.Abstractions;
-using RSM.Socar.CRM.Application.Users;
 using RSM.Socar.CRM.Domain.Identity;
 
 namespace RSM.Socar.CRM.Web.Security;
