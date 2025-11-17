@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authorization;
+using RSM.Socar.CRM.Application.Security;
 
 namespace RSM.Socar.CRM.Web.Security;
 

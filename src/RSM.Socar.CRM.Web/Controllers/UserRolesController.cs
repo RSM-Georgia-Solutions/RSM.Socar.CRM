@@ -5,12 +5,9 @@ using Microsoft.AspNetCore.OData.Query;
 using Microsoft.AspNetCore.OData.Routing.Attributes;
 using Microsoft.AspNetCore.OData.Routing.Controllers;
 using Microsoft.EntityFrameworkCore;
-using RSM.Socar.CRM.Application.Roles.Commands;
+using RSM.Socar.CRM.Application.UserRoles.Commands;
 using RSM.Socar.CRM.Domain.Identity;
 using RSM.Socar.CRM.Infrastructure.Persistence;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace RSM.Socar.CRM.Web.Controllers;
 

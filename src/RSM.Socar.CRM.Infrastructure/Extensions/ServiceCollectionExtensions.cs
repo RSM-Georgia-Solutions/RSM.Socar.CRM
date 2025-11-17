@@ -32,6 +32,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICurrentUser, CurrentUser>();     // per request
 
         services.AddScoped<AuditingSoftDeleteInterceptor>(); // interceptor
+        services.AddScoped<AuthorizationInterceptor>();
 
 
         // DbContext registration that supports both caller-provided config and the interceptor
@@ -54,8 +55,13 @@ public static class ServiceCollectionExtensions
             }
 
             // 3) Always add the interceptor (auditing + soft-delete) after the provider is configured
-            var auditingInterceptor = sp.GetRequiredService<AuditingSoftDeleteInterceptor>();
-            options.AddInterceptors(auditingInterceptor);
+            options.AddInterceptors(sp.GetRequiredService<AuditingSoftDeleteInterceptor>());
+
+            //options.AddInterceptors(
+            //    sp.GetRequiredService<AuditingSoftDeleteInterceptor>(),
+            //    sp.GetRequiredService<AuthorizationInterceptor>()
+            //);
+
 
             // (optional) nice-to-haves, driven by config
             var env = sp.GetRequiredService<IHostEnvironment>();

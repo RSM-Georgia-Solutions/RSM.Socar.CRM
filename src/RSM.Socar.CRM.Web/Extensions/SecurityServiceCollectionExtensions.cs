@@ -1,4 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
+using RSM.Socar.CRM.Application.Security;
+using RSM.Socar.CRM.Infrastructure.Security;
 using RSM.Socar.CRM.Web.Security;
 
 namespace RSM.Socar.CRM.Web.Extensions;
