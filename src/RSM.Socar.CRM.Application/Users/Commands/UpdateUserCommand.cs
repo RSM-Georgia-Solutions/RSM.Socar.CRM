@@ -2,6 +2,7 @@
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 using RSM.Socar.CRM.Application.Abstractions;
+using RSM.Socar.CRM.Domain.Enums;
 
 namespace RSM.Socar.CRM.Application.Users.Commands;
 
@@ -17,7 +18,7 @@ public abstract class UpdateUserCommand
     string? Mobile,
     string? Email,
     string? Position,
-    bool IsActive,
+    UserStatus Status,
     byte[] RowVersion // for concurrency
 ) : IRequest;
 
@@ -82,7 +83,7 @@ public abstract class UpdateUserCommand
             entity.Mobile = cmd.Mobile;
             entity.Email = cmd.Email;
             entity.Position = cmd.Position;
-            entity.IsActive = cmd.IsActive;
+            entity.Status = cmd.Status;
 
             await _uow.SaveChangesAsync(ct);
         }

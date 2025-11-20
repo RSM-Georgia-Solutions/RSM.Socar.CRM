@@ -49,21 +49,29 @@ public static class ObservabilityExtensions
                 t.SetSampler(new ParentBasedSampler(new TraceIdRatioBasedSampler(sampleRate)));
                 t.AddOtlpExporter();                   // ensure traces go to dashboard
 
-                // OTLP exporter (enabled if endpoint provided)
-                var otlpEndpoint = cfg.GetValue<string?>("OpenTelemetry:Otlp:Endpoint")
-                                   ?? Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT");
+                // resolve endpoint
+                var otlpEndpoint =
+                    Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT") ??
+                    cfg.GetValue<string?>("OpenTelemetry:Otlp:Endpoint");
 
-                if (!string.IsNullOrWhiteSpace(otlpEndpoint))
+                t.AddOtlpExporter(o =>
                 {
-                    t.AddOtlpExporter(o =>  
-                    {
+                    if (!string.IsNullOrWhiteSpace(otlpEndpoint))
                         o.Endpoint = new Uri(otlpEndpoint);
-                        o.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.Grpc;
-                        // optional: headers
-                        var headers = cfg.GetValue<string?>("OpenTelemetry:Otlp:Headers");
-                        if (!string.IsNullOrWhiteSpace(headers)) o.Headers = headers;
-                    });
-                }
+
+                    // protocol
+                    var protocol = Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_PROTOCOL")
+                                ?? "grpc";
+                    o.Protocol = protocol.Equals("http", StringComparison.OrdinalIgnoreCase)
+                        ? OpenTelemetry.Exporter.OtlpExportProtocol.HttpProtobuf
+                        : OpenTelemetry.Exporter.OtlpExportProtocol.Grpc;
+
+                    // headers
+                    var headers = cfg.GetValue<string?>("OpenTelemetry:Otlp:Headers");
+                    if (!string.IsNullOrWhiteSpace(headers))
+                        o.Headers = headers;
+                });
+
             })
 
             // ===== Metrics =====
@@ -73,7 +81,6 @@ public static class ObservabilityExtensions
                  .AddHttpClientInstrumentation()
                  .AddRuntimeInstrumentation()
                  .AddProcessInstrumentation()
-                 .AddOtlpExporter()          // <- send metrics to Aspire dashboard via OTLP
                  .AddPrometheusExporter();   // (optional) keep /metrics for Prometheus
             });
 

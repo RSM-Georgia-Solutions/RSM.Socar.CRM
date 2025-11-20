@@ -1,4 +1,5 @@
 ﻿using RSM.Socar.CRM.Domain.Common;
+using RSM.Socar.CRM.Domain.Enums;
 
 namespace RSM.Socar.CRM.Domain.Identity;
 
@@ -13,7 +14,7 @@ public sealed class User : AuditableEntity
     public string? Email { get; set; }
     public string? Position { get; set; }
 
-    public bool IsActive { get; set; } = true;
+    public UserStatus Status { get; set; }
 
     /// <summary>
     /// First registration date of the user.
@@ -27,5 +28,4 @@ public sealed class User : AuditableEntity
     public string PasswordHash { get; set; } = default!;
 
     public ICollection<UserRole> Roles { get; set; } = [];
-    public ICollection<UserPermission> Permissions { get; set; } = [];
 }

@@ -1,0 +1,43 @@
+version: "3.9"
+
+services:
+  socar-aspire-dashboard:
+    image: mcr.microsoft.com/dotnet/aspire-dashboard:latest
+    container_name: socar-aspire-dashboard
+    ports:
+      - "18888:18888"  # Dashboard UI
+      - "4317:4317"    # OTLP gRPC
+      - "4318:4318"    # OTLP HTTP
+    environment:
+      ASPNETCORE_URLS: http://+:18888
+    restart: unless-stopped
+
+  rsm.socar.crm.web:
+    container_name: rsm-socar-crm-web
+    build:
+      context: .
+      dockerfile: src/RSM.Socar.CRM.Web/Dockerfile
+    image: ${DOCKER_REGISTRY-}rsmsocarcrmweb
+    ports:
+      - "8080:8080"       # Application HTTP
+    environment:
+      ASPNETCORE_ENVIRONMENT: Docker
+      ASPNETCORE_URLS: "http://+:8080"
+
+      # OpenTelemetry environment bindings
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://socar-aspire-dashboard:4317"
+      OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
+      OTEL_SERVICE_NAME: "rsm-socar-crm-web"
+
+      # Connection string (better move to .env or secrets in production)
+      ConnectionStrings__Sql: "Server=192.168.7.22;Database=RMASocarCRM;User Id=sa;Password=SAPB1Admin;Encrypt=False;"
+
+      # JWT settings (override via env if needed)
+      Jwt__Issuer: "RSM.Socar.CRM"
+      Jwt__Audience: "RSM.Socar.CRM.Client"
+      Jwt__SigningKey: "change-this-to-a-long-random-secret-64-bytes-minimum"
+      Jwt__AccessTokenMinutes: "60"
+
+    depends_on:
+      - socar-aspire-dashboard
+    restart: unless-stopped

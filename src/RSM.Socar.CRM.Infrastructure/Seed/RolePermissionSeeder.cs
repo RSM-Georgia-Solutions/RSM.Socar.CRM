@@ -34,8 +34,9 @@ public sealed class RolePermissionSeeder
         {
             if (!existingNames.Contains(name))
             {
-                _db.Permissions.Add(new Permission
+                _db.Permissions.Add(entity: new Permission
                 {
+                    Ketworrd = name,
                     Name = name,
                     Description = null
                 });

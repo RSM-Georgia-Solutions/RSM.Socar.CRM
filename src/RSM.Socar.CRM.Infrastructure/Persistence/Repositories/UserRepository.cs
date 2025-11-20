@@ -30,7 +30,7 @@ internal sealed class UserRepository(AppDbContext db) : IUserRepository
     public void Remove(User user) => db.Users.Remove(user);
 
 
-    public async Task<User?> GetByIdWithRolesAndPermissionsAsync(int id, CancellationToken ct)
+    public async Task<User?> GetByIdWithRolesAsync(int id, CancellationToken ct)
     {
         return await db.Users
             .AsNoTracking()
@@ -38,8 +38,6 @@ internal sealed class UserRepository(AppDbContext db) : IUserRepository
                 .ThenInclude(ur => ur.Role)
                     .ThenInclude(r => r.RolePermissions)
                         .ThenInclude(rp => rp.Permission)
-            .Include(u => u.Permissions)
-                .ThenInclude(up => up.Permission)
             .FirstOrDefaultAsync(u => u.Id == id, ct);
     }
 
@@ -53,18 +51,8 @@ internal sealed class UserRepository(AppDbContext db) : IUserRepository
     // -------------------------
 
 
-    public void AddPermission(UserPermission entity)
-        => db.UserPermissions.Add(entity);
-
-    public void RemovePermission(UserPermission entity)
-        => db.UserPermissions.Remove(entity);
-
     public async Task<bool> HasRoleAsync(int userId, int roleId, CancellationToken ct)
        => await db.UserRoles.AnyAsync(x => x.UserId == userId && x.RoleId == roleId, ct);
-
-    public async Task<bool> HasPermissionAsync(int userId, int permissionId, CancellationToken ct)
-        => await db.UserPermissions.AnyAsync(x =>
-            x.UserId == userId && x.PermissionId == permissionId, ct);
 
 
     // inside UserRepository (Infrastructure)
@@ -73,4 +61,7 @@ internal sealed class UserRepository(AppDbContext db) : IUserRepository
         var entry = db.Entry(entity);
         entry.Property(u => u.RowVersion).OriginalValue = rowVersion;
     }
+
+    public Task<User?> GetByPersonalNoAsync(string personalNo, CancellationToken ct) =>
+        db.Users.FirstOrDefaultAsync(u => u.PersonalNo == personalNo, ct);
 }

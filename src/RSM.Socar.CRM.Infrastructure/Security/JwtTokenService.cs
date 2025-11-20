@@ -22,7 +22,7 @@ public sealed class JwtTokenService(IOptions<JwtOptions> opt) : IJwtTokenService
             new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new(JwtRegisteredClaimNames.Email, user.Email ?? string.Empty),
             new("name", $"{user.FirstName} {user.LastName}".Trim()),
-            new("active", user.IsActive.ToString().ToLowerInvariant())
+            new("active", user.Status.ToString().ToLowerInvariant())
         };
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_opt.SigningKey));

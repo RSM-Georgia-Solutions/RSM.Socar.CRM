@@ -22,7 +22,6 @@ public sealed class AppDbContext : DbContext
 
     public DbSet<UserRole> UserRoles => Set<UserRole>();
     public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
-    public DbSet<UserPermission> UserPermissions => Set<UserPermission>();
 
     // ----------------------------
     // EF Configuration

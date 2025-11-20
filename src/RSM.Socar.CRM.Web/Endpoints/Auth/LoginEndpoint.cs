@@ -10,12 +10,12 @@ public static class LoginEndpoint
     {
         var g = app.MapGroup("/api/auth").WithTags("Auth");
 
-        g.MapPost("/login", async Task<Results<Ok<LoginResult>, UnauthorizedHttpResult>> (
-            LoginRequest req, ISender sender, CancellationToken ct) =>
+        g.MapPost("/login", async Task<Results<Ok<LoginCommand.Result>, UnauthorizedHttpResult>> (
+            LoginCommand.Request req, ISender sender, CancellationToken ct) =>
         {
             try
             {
-                var res = await sender.Send(new LoginCommand(req.Email, req.Password), ct);
+                var res = await sender.Send(req, ct);
                 return TypedResults.Ok(res);
             }
             catch (UnauthorizedAccessException)
@@ -28,4 +28,4 @@ public static class LoginEndpoint
     }
 }
 
-public sealed record LoginRequest(string Email, string Password);
+public sealed record LoginRequest(string PersonalNo, string Password);

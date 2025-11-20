@@ -12,8 +12,8 @@ using RSM.Socar.CRM.Infrastructure.Persistence;
 namespace RSM.Socar.CRM.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20251114064007_AddRolesAndPermissions")]
-    partial class AddRolesAndPermissions
+    [Migration("20251120100837_Init")]
+    partial class Init
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -33,7 +33,32 @@ namespace RSM.Socar.CRM.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("DeletedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Ketworrd")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("LastModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("LastModifiedBy")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Name")
@@ -46,6 +71,9 @@ namespace RSM.Socar.CRM.Infrastructure.Migrations
                         .IsRequired()
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
@@ -63,7 +91,28 @@ namespace RSM.Socar.CRM.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("DeletedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("LastModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("LastModifiedBy")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Name")
@@ -76,6 +125,9 @@ namespace RSM.Socar.CRM.Infrastructure.Migrations
                         .IsRequired()
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
@@ -134,9 +186,6 @@ namespace RSM.Socar.CRM.Infrastructure.Migrations
                         .HasMaxLength(128)
                         .HasColumnType("nvarchar(128)");
 
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
                     b.Property<bool>("IsDeleted")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
@@ -179,6 +228,9 @@ namespace RSM.Socar.CRM.Infrastructure.Migrations
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
 
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
                     b.HasIndex("Email");
@@ -187,21 +239,6 @@ namespace RSM.Socar.CRM.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("Users", "Identity");
-                });
-
-            modelBuilder.Entity("RSM.Socar.CRM.Domain.Identity.UserPermission", b =>
-                {
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("PermissionId")
-                        .HasColumnType("int");
-
-                    b.HasKey("UserId", "PermissionId");
-
-                    b.HasIndex("PermissionId");
-
-                    b.ToTable("UserPermissions", "Identity");
                 });
 
             modelBuilder.Entity("RSM.Socar.CRM.Domain.Identity.UserRole", b =>
@@ -222,13 +259,13 @@ namespace RSM.Socar.CRM.Infrastructure.Migrations
             modelBuilder.Entity("RSM.Socar.CRM.Domain.Identity.RolePermission", b =>
                 {
                     b.HasOne("RSM.Socar.CRM.Domain.Identity.Permission", "Permission")
-                        .WithMany("Roles")
+                        .WithMany("RolePermissions")
                         .HasForeignKey("PermissionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("RSM.Socar.CRM.Domain.Identity.Role", "Role")
-                        .WithMany("Permissions")
+                        .WithMany("RolePermissions")
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -238,29 +275,10 @@ namespace RSM.Socar.CRM.Infrastructure.Migrations
                     b.Navigation("Role");
                 });
 
-            modelBuilder.Entity("RSM.Socar.CRM.Domain.Identity.UserPermission", b =>
-                {
-                    b.HasOne("RSM.Socar.CRM.Domain.Identity.Permission", "Permission")
-                        .WithMany("Users")
-                        .HasForeignKey("PermissionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("RSM.Socar.CRM.Domain.Identity.User", "User")
-                        .WithMany("Permissions")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Permission");
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("RSM.Socar.CRM.Domain.Identity.UserRole", b =>
                 {
                     b.HasOne("RSM.Socar.CRM.Domain.Identity.Role", "Role")
-                        .WithMany("Users")
+                        .WithMany("UserRoles")
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -278,22 +296,18 @@ namespace RSM.Socar.CRM.Infrastructure.Migrations
 
             modelBuilder.Entity("RSM.Socar.CRM.Domain.Identity.Permission", b =>
                 {
-                    b.Navigation("Roles");
-
-                    b.Navigation("Users");
+                    b.Navigation("RolePermissions");
                 });
 
             modelBuilder.Entity("RSM.Socar.CRM.Domain.Identity.Role", b =>
                 {
-                    b.Navigation("Permissions");
+                    b.Navigation("RolePermissions");
 
-                    b.Navigation("Users");
+                    b.Navigation("UserRoles");
                 });
 
             modelBuilder.Entity("RSM.Socar.CRM.Domain.Identity.User", b =>
                 {
-                    b.Navigation("Permissions");
-
                     b.Navigation("Roles");
                 });
 #pragma warning restore 612, 618

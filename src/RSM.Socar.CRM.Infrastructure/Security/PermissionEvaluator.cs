@@ -29,17 +29,14 @@ namespace RSM.Socar.CRM.Infrastructure.Security
             // Cache permissions for this request
             if (_cached is null)
             {
-                var user = await _users.GetByIdWithRolesAndPermissionsAsync(userId, ct);
+                var user = await _users.GetByIdWithRolesAsync(userId, ct);
 
                 if (user is null)
                     return false;
 
                 _cached = new HashSet<string>(
                     user.Roles
-                        .SelectMany(r => r.Role.RolePermissions.Select(p => p.Permission.Name))
-                    .Concat(
-                        user.Permissions.Select(p => p.Permission.Name)
-                    ),
+                        .SelectMany(r => r.Role.RolePermissions.Select(p => p.Permission.Name)),
                     StringComparer.OrdinalIgnoreCase
                 );
             }

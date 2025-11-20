@@ -11,16 +11,12 @@ public interface IUserRepository
     void MarkConcurrencyToken(User entity, byte[] rowVersion);
     void Add(User user);
     Task<User?> GetByEmailAsync(string email, CancellationToken ct);
+    Task<User?> GetByPersonalNoAsync(string personalNo, CancellationToken ct);
     void Remove(User entity);
-    Task<User?> GetByIdWithRolesAndPermissionsAsync(int id, CancellationToken ct);
+    Task<User?> GetByIdWithRolesAsync(int id, CancellationToken ct);
 
     void AddRole(UserRole entity);
     void RemoveRole(UserRole entity);
 
-    void AddPermission(UserPermission entity);
-    void RemovePermission(UserPermission entity);
-
-
     Task<bool> HasRoleAsync(int userId, int roleId, CancellationToken ct);
-    Task<bool> HasPermissionAsync(int userId, int permissionId, CancellationToken ct);
 }

@@ -36,17 +36,6 @@ public sealed class PermissionMiddleware : IMiddleware
             return;
         }
 
-        var userId = int.Parse(userIdStr);
-
-        var hasPermission = await _db.UserPermissions
-            .AnyAsync(up => up.UserId == userId && up.Permission.Name == attr.Permission);
-
-        if (!hasPermission)
-        {
-            ctx.Response.StatusCode = StatusCodes.Status403Forbidden;
-            return;
-        }
-
         await next(ctx);
     }
 }

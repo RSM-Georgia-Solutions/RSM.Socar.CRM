@@ -44,7 +44,7 @@ namespace RSM.Socar.CRM.Application.Users.Commands
                     Mobile = req.Mobile,
                     Email = req.Email,
                     Position = req.Position,
-                    IsActive = true,
+                    Status = Domain.Enums.UserStatus.Active,
                     RegisteredAtUtc = DateTime.UtcNow,
                     PasswordHash = string.Empty // set later via SetPassword flow
                 };

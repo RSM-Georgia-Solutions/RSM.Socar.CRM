@@ -78,8 +78,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IDbExecutionStrategy, DbExecutionStrategy>();
         services.AddScoped<IDbTransactionFactory, DbTransactionFactory>();
 
-        services.AddScoped<IPermissionDiscoveryService, PermissionDiscoveryService>();
-        services.AddScoped<RolePermissionSeeder>();
+        //services.AddScoped<IPermissionDiscoveryService, PermissionDiscoveryService>();
+        //services.AddScoped<RolePermissionSeeder>();
 
         // Users repository
         services.AddScoped<IUserRepository, UserRepository>();

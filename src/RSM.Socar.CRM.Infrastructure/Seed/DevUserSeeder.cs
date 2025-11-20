@@ -16,7 +16,7 @@ public static class DevUserSeeder
             FirstName = "Admin",
             LastName = "User",
             PersonalNo = "12345678901",
-            IsActive = true,
+            Status = Domain.Enums.UserStatus.Active,
             RegisteredAtUtc = DateTime.UtcNow
         };
 
